@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#172554">
+<meta name="description" content="オフラインで使える勉強時間記録アプリ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Study Log</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#172033;--muted:#68738a;--blue:#315ee8;--pale:#e8edff;--line:#e7eaf1;--green:#16a36a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+header{background:#172554;color:white;padding:22px 18px 18px;position:sticky;top:0;z-index:2}
+header .sub{font-size:12px;opacity:.75}header h1{font-size:21px;margin:3px 0 0}
+main{max-width:620px;margin:auto;padding:16px 14px 92px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;z-index:5;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+nav button{border:0;background:none;color:var(--muted);font-size:12px;padding:7px 18px;border-radius:12px}nav button.active{background:var(--pale);color:var(--blue);font-weight:700}
+.panel{background:var(--card);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 3px 16px #1d2b4a0b}
+.timer{text-align:center;padding:24px 16px}.eyebrow{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.clock{font-size:clamp(42px,12vw,62px);font-weight:750;letter-spacing:-2px;font-variant-numeric:tabular-nums;margin:12px 0}
+.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}.primary,.secondary,.danger{border:0;border-radius:13px;padding:12px 22px;font-weight:700}.primary{background:var(--blue);color:white}.secondary{background:var(--pale);color:var(--blue)}.danger{background:#fff0f0;color:#c33}
+input{font:inherit;border:1px solid var(--line);border-radius:11px;padding:11px;width:100%;background:white;color:var(--ink)}
+.field{max-width:300px;margin:12px auto 16px;text-align:left}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+h2{font-size:16px;margin:0 0 14px}.muted{color:var(--muted);font-size:13px}.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:#f7f8fc;border-radius:13px;padding:13px}.stat strong{display:block;font-size:21px;margin-top:4px}
+.monthhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.monthhead button{border:0;background:var(--pale);color:var(--blue);border-radius:9px;padding:7px 12px}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.dow{text-align:center;color:var(--muted);font-size:11px;padding:5px 0}.day{min-height:54px;border-radius:10px;background:#f5f6fa;padding:5px 2px;text-align:center;border:1px solid transparent;font-size:12px}.day small{display:block;font-size:9px;color:var(--muted);margin-top:4px}.day.has{background:#e5ebff}.day.level2{background:#cbd7ff}.day.level3{background:#9db4ff}.day.level4{background:#6688f4;color:white}.day.level4 small{color:white}.day.selected{border:2px solid var(--blue)}
+.record{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}.record:last-child{border:0}
+.barrow{display:grid;grid-template-columns:42px 1fr 62px;gap:8px;align-items:center;margin:10px 0;font-size:12px}.track{height:10px;background:#edf0f6;border-radius:20px;overflow:hidden}.fill{height:100%;background:var(--blue);border-radius:20px}
+.section{display:none}.section.active{display:block}.empty{text-align:center;padding:22px;color:var(--muted);font-size:13px}
+.smallbtn{border:0;background:none;color:var(--blue);font-size:12px;padding:4px}
+footer{text-align:center;color:#8992a5;font-size:11px;padding:10px}
+</style>
+</head>
+<body>
+<header><div class="sub">YOUR PERSONAL STUDY TRACKER</div><h1>Study Log 📚</h1></header>
+<main>
+<section id="timerTab" class="section active">
+ <div class="panel timer">
+  <div class="eyebrow" id="timerStatus">今日の勉強</div>
+  <div class="clock" id="clock">00:00:00</div>
+  <div class="field"><label for="subject">勉強内容（任意）</label><input id="subject" maxlength="40" placeholder="例：数学、英語、資格勉強"></div>
+  <div class="actions"><button class="primary" id="startBtn">▶ スタート</button><button class="secondary" id="pauseBtn" hidden>一時停止</button><button class="primary" id="finishBtn" hidden>記録して終了</button></div>
+  <p class="muted" id="timerHint">スタートすると勉強時間を計測します</p>
+ </div>
+ <div class="panel"><h2>今日の記録</h2><div class="statgrid"><div class="stat"><span class="muted">今日の合計</span><strong id="todayTotal">0分</strong></div><div class="stat"><span class="muted">記録した回数</span><strong id="todayCount">0回</strong></div></div></div>
+ <div class="panel"><h2>最近の記録</h2><div id="recent"></div></div>
+</section>
+<section id="calendarTab" class="section">
+ <div class="panel"><div class="monthhead"><button id="prevMonth">‹</button><h2 id="monthTitle" style="margin:0"></h2><button id="nextMonth">›</button></div><div class="calendar" id="calendar"></div><p class="muted">色が濃いほど、その日の勉強時間が長いです。</p></div>
+ <div class="panel"><h2 id="selectedTitle">日別の記録</h2><div id="selectedRecords"></div></div>
+</section>
+<section id="statsTab" class="section">
+ <div class="panel"><h2>週間の勉強時間</h2><div class="statgrid"><div class="stat"><span class="muted">週合計</span><strong id="weekTotal">0分</strong></div><div class="stat"><span class="muted">1日平均</span><strong id="weekAvg">0分</strong></div></div><div id="weekBars"></div><p class="muted" id="weekRange"></p></div>
+ <div class="panel"><h2>月間の勉強時間</h2><div class="statgrid"><div class="stat"><span class="muted">月合計</span><strong id="monthTotal">0分</strong></div><div class="stat"><span class="muted">1日平均</span><strong id="monthAvg">0分</strong></div></div><div id="monthBars"></div><p class="muted" id="statsMonth"></p></div>
+</section>
+<section id="settingsTab" class="section">
+ <div class="panel"><h2>記録の管理</h2><p class="muted">記録はこの端末のブラウザ内に保存されます。ブラウザのデータ削除や端末変更で消えることがあるため、定期的にバックアップしてください。</p><div class="actions"><button class="secondary" id="exportBtn">記録をバックアップ</button><button class="secondary" id="importBtn">バックアップを復元</button><input id="importFile" type="file" accept="application/json" hidden></div></div>
+ <div class="panel"><h2>手動で記録を追加</h2><div class="field"><label>日付</label><input id="manualDate" type="date"></div><div class="field"><label>勉強時間（分）</label><input id="manualMinutes" type="number" min="1" max="1440" placeholder="例：45"></div><div class="field"><label>勉強内容（任意）</label><input id="manualSubject" maxlength="40" placeholder="例：理科"></div><div class="actions"><button class="primary" id="addManual">追加する</button></div></div>
+ <div class="panel"><h2>データの削除</h2><button class="danger" id="clearBtn">すべての記録を削除</button></div>
+</section>
+<footer>Study Log · データは端末内に保存</footer>
+</main>
+<nav><button class="active" data-tab="timerTab">⏱ タイマー</button><button data-tab="calendarTab">▦ カレンダー</button><button data-tab="statsTab">▥ 統計</button><button data-tab="settingsTab">⚙ 設定</button></nav>
+<script>
+const $=id=>document.getElementById(id);
+const KEY='study-log-v1';
+let records=[], running=null, pausedMs=0, startedAt=null, monthCursor=new Date(), selectedDate=localDate(new Date()), tick=null;
+function localDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');records=Array.isArray(x.records)?x.records:[];running=x.running||null;pausedMs=x.pausedMs||0;startedAt=x.startedAt||null;}catch(e){records=[]}}
+function save(){localStorage.setItem(KEY,JSON.stringify({records,running,pausedMs,startedAt}))}
+function durationLabel(ms){let m=Math.floor(ms/60000),h=Math.floor(m/60);m%=60;return h?`${h}時間${m}分`:`${m}分`}
+function sum(date){return records.filter(r=>r.date===date).reduce((a,r)=>a+r.minutes,0)}
+function fmtClock(ms){let s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(n=>String(n).padStart(2,'0')).join(':')}
+function elapsed(){return pausedMs+(running&&startedAt?Date.now()-startedAt:0)}
+function renderTimer(){let active=!!running;$('clock').textContent=fmtClock(elapsed());$('startBtn').hidden=active;$('pauseBtn').hidden=!active;$('finishBtn').hidden=!active;$('timerStatus').textContent=active?'計測中':'今日の勉強';$('timerHint').textContent=active?'計測中です。画面を閉じても時間は記録されます。':'スタートすると勉強時間を計測します';let t=localDate(new Date());$('todayTotal').textContent=durationLabel(sum(t)*60000);$('todayCount').textContent=records.filter(r=>r.date===t).length+'回';renderRecent()}
+function renderRecent(){let arr=[...records].sort((a,b)=>b.created-a.created).slice(0,5);$('recent').innerHTML=arr.length?arr.map(r=>`<div class="record"><span>${esc(r.date)} · ${esc(r.subject||'勉強')}</span><b>${durationLabel(r.minutes*60000)}</b></div>`).join(''):'<div class="empty">まだ記録がありません</div>'}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('startBtn').onclick=()=>{running=true;startedAt=Date.now();pausedMs=0;save();renderTimer();tick&&clearInterval(tick);tick=setInterval(renderTimer,500)};
+$('pauseBtn').onclick=()=>{pausedMs=elapsed();running=false;startedAt=null;save();$('startBtn').hidden=false;$('pauseBtn').hidden=true;$('finishBtn').hidden=true;$('timerStatus').textContent='一時停止中';$('timerHint').textContent='再開するにはスタートを押してください';$('clock').textContent=fmtClock(pausedMs);};
+$('startBtn').addEventListener('click',()=>{if(pausedMs>0){/* resume from saved elapsed */}});
+$('finishBtn').onclick=()=>{let ms=elapsed(),mins=Math.max(1,Math.round(ms/60000));records.push({date:localDate(new Date()),minutes:mins,subject:$('subject').value.trim(),created:Date.now()});running=null;startedAt=null;pausedMs=0;save();clearInterval(tick);$('subject').value='';renderAll();};
+function renderCalendar(){let y=monthCursor.getFullYear(),m=monthCursor.getMonth();$('monthTitle').textContent=`${y}年${m+1}月`;let first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),offset=first.getDay(),max=Math.max(1,...Array.from({length:days},(_,i)=>sum(localDate(new Date(y,m,i+1)))));let html=['日','月','火','水','木','金','土'].map(x=>`<div class="dow">${x}</div>`).join('');for(let i=0;i<offset;i++)html+='<div></div>';for(let d=1;d<=days;d++){let date=localDate(new Date(y,m,d)),v=sum(date),ratio=v/max,level=v===0?'':ratio<.25?'has':ratio<.5?'level2':ratio<.75?'level3':'level4';html+=`<button class="day ${level} ${date===selectedDate?'selected':''}" data-date="${date}">${d}<small>${v?durationLabel(v*60000):' '}</small></button>`}$('calendar').innerHTML=html;$('calendar').querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{selectedDate=b.dataset.date;renderCalendar();renderSelected()});renderSelected()}
+function renderSelected(){let d=records.filter(r=>r.date===selectedDate).sort((a,b)=>a.created-b.created);$('selectedTitle').textContent=selectedDate+' の記録 · '+durationLabel(sum(selectedDate)*60000);$('selectedRecords').innerHTML=d.length?d.map(r=>`<div class="record"><span>${esc(r.subject||'勉強')}</span><b>${durationLabel(r.minutes*60000)}</b></div>`).join(''):'<div class="empty">この日の記録はありません</div>'}
+function weekStart(d){let x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x}
+function renderStats(){let now=new Date(),ws=weekStart(now),week=[],total=0;for(let i=0;i<7;i++){let d=new Date(ws);d.setDate(ws.getDate()+i);let v=sum(localDate(d));week.push({label:['日','月','火','水','木','金','土'][i],v});total+=v}let today=new Date();let elapsedDays=Math.min(7,Math.floor((today-ws)/86400000)+1);$('weekTotal').textContent=durationLabel(total*60000);$('weekAvg').textContent=durationLabel(total/elapsedDays*60000);$('weekRange').textContent=`${localDate(ws)} ～ ${localDate(new Date(ws.getFullYear(),ws.getMonth(),ws.getDate()+6))}（今日までの${elapsedDays}日で平均）`;let max=Math.max(1,...week.map(x=>x.v));$('weekBars').innerHTML=week.map(x=>`<div class="barrow"><span>${x.label}曜</span><div class="track"><div class="fill" style="width:${x.v/max*100}%"></div></div><b>${x.v?durationLabel(x.v*60000):'0分'}</b></div>`).join('');
+let y=now.getFullYear(),m=now.getMonth(),days=new Date(y,m+1,0).getDate(),mt=0;let vals=[];for(let d=1;d<=days;d++){let v=sum(localDate(new Date(y,m,d)));mt+=v;if(v)vals.push({d,v})}let passed=now.getDate();$('monthTotal').textContent=durationLabel(mt*60000);$('monthAvg').textContent=durationLabel(mt/passed*60000);$('statsMonth').textContent=`${y}年${m+1}月（今日までの${passed}日で平均）`;let mm=Math.max(1,...vals.map(x=>x.v));$('monthBars').innerHTML=vals.length?vals.map(x=>`<div class="barrow"><span>${x.d}日</span><div class="track"><div class="fill" style="width:${x.v/mm*100}%"></div></div><b>${durationLabel(x.v*60000)}</b></div>`).join(''):'<div class="empty">今月の記録はまだありません</div>'}
+function renderAll(){renderTimer();renderCalendar();renderStats()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));if(b.dataset.tab==='statsTab')renderStats()});
+$('prevMonth').onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()-1);renderCalendar()};$('nextMonth').onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()+1);renderCalendar()};
+$('manualDate').value=localDate(new Date());$('addManual').onclick=()=>{let mins=Number($('manualMinutes').value),date=$('manualDate').value;if(!date||!Number.isInteger(mins)||mins<1||mins>1440){alert('日付と1〜1440分の勉強時間を入力してください');return}records.push({date,minutes:mins,subject:$('manualSubject').value.trim(),created:Date.now()});save();$('manualMinutes').value='';$('manualSubject').value='';selectedDate=date;monthCursor=new Date(date+'T12:00:00');renderAll();alert('記録を追加しました')};
+$('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify({records},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='study-log-backup.json';a.click();URL.revokeObjectURL(a.href)};
+$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!Array.isArray(data.records))throw 0;if(!confirm('現在の記録をバックアップ内容で置き換えますか？'))return;records=data.records.filter(r=>r.date&&Number.isFinite(r.minutes));save();renderAll();alert('復元しました')}catch(err){alert('バックアップファイルを読み込めませんでした')}e.target.value=''};
+$('clearBtn').onclick=()=>{if(confirm('すべての記録を削除します。この操作は取り消せません。')){records=[];running=null;startedAt=null;pausedMs=0;save();renderAll()}};
+load();
+// A paused timer can be resumed without losing elapsed time.
+$('startBtn').onclick=()=>{running=true;startedAt=Date.now();save();renderTimer();tick&&clearInterval(tick);tick=setInterval(renderTimer,500)};
+if(running&&startedAt){tick=setInterval(renderTimer,500)}renderAll();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>
